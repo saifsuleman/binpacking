@@ -30,7 +30,7 @@ var rootCmd = &cobra.Command{
 }
 
 var splitCmd = &cobra.Command{
-	Use:   "split <input.csv> <buckets> <output_prefix>",
+	Use:   "split <input_csv> <buckets> <output_prefix>",
 	Short: "Split the input CSV file into smaller files",
 	Args:  cobra.ExactArgs(3),
 	Run: func(cmd *cobra.Command, args []string) {
@@ -48,8 +48,50 @@ var splitCmd = &cobra.Command{
 	},
 }
 
+var inspectCmd = &cobra.Command{
+	Use: "inspect <input_csv>",
+	Short: "Print the number of entries and total size of the input CSV file",
+	Args: cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		input := args[0]
+		f, err := os.Open(input)
+		if err != nil {
+			fmt.Println("Error opening file:", err)
+			os.Exit(1)
+		}
+		defer f.Close()
+
+		r := csv.NewReader(bufio.NewReader(f))
+		lineCount := 0
+		totalSize := int64(0)
+
+		r.Read()
+
+		for {
+			record, err := r.Read()
+			if err != nil {
+				break
+			}
+			lineCount++
+			size, err := strconv.Atoi(record[2])
+			if err != nil {
+				fmt.Printf("Error parsing size for line %d: %v\n", lineCount, err)
+				continue
+			}
+			totalSize += int64(size)
+
+			if lineCount % 1000000 == 0 {
+				fmt.Printf("Processed %d lines...\n", lineCount)
+			}
+		}
+
+		fmt.Printf("Total lines: %d, Total size: %sMB\n", lineCount, FormatNumber(totalSize / (1024 * 1024)))
+	},
+}
+
 func main() {
 	rootCmd.AddCommand(splitCmd)
+	rootCmd.AddCommand(inspectCmd)
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
@@ -87,7 +129,7 @@ func scan(filename string) []LineMeta {
 		metas = append(metas, LineMeta{LineNumber: line, Size: size})
 		line++
 
-		if line % 100000 == 0 {
+		if line % 1000000 == 0 {
 			fmt.Printf("[meta scan] %d lines...\n", line)
 		}
 	}

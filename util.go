@@ -24,3 +24,4 @@ func FormatNumber(n int64) string {
 	}
 	return b.String()
 }
+
