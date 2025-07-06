@@ -4,6 +4,15 @@ A command-line tool written in Go to efficiently **split a large CSV file** into
 
 ---
 
+## Example Run Commands
+```
+{ time ./binpacking split input.csv 3 out_ 2>&1 | tee -a output.log ; } 2>&1 | tee -a output.log
+```
+
+Splits a file `input.csv` into `3` buckets with prefix `out_` for output files and logs to `output.log` and time stats (linux)
+
+---
+
 ## Features
 
 * **Greedy bin packing** algorithm based on CSV line size.
