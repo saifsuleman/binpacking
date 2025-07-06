@@ -120,22 +120,12 @@ func scan(filename string) []LineMeta {
 
 	line++
 
-	parseErrors := 0
 	for {
 		record, err := r.Read()
 		if err != nil {
 			break
 		}
-
-		// DEBUG: Check if we can parse the size
-		size, parseErr := strconv.ParseInt(record[2], 10, 64)
-		if parseErr != nil {
-			fmt.Printf("[meta scan] Error parsing size for line %d: %v (record: %v)\n", line, parseErr, record)
-			parseErrors++
-			line++
-			continue
-		}
-
+		size, _ := strconv.ParseInt(record[2], 10, 64)
 		metas = append(metas, LineMeta{LineNumber: line, Size: size})
 		line++
 
@@ -145,10 +135,7 @@ func scan(filename string) []LineMeta {
 	}
 
 	end := time.Now()
-	fmt.Printf("[meta scan] scan finished %d lines in %s\n", len(metas), end.Sub(start))
-	fmt.Printf("[meta scan] parse errors: %d\n", parseErrors)
-	fmt.Printf("[meta scan] highest line number: %d\n", metas[len(metas)-1].LineNumber)
-	fmt.Printf("[meta scan] total lines processed (including header): %d\n", line)
+	fmt.Printf("[meta scan] scan finished %d lines in %s\n\n", len(metas), end.Sub(start))
 
 	return metas
 }
@@ -180,15 +167,6 @@ func binpack(metas []LineMeta, bucketsN int) []FileBucket {
 	for i, bucket := range buckets {
 		fmt.Printf("Bucket %d: Total Size = %d, Lines = %d\n", i+1, bucket.TotalSize, len(bucket.LineNums))
 	}
-
-	// DEBUG: Check total lines in all buckets
-	totalLinesInBuckets := 0
-	for _, bucket := range buckets {
-		totalLinesInBuckets += len(bucket.LineNums)
-	}
-	fmt.Printf("[binpack] total lines across all buckets: %d\n", totalLinesInBuckets)
-	fmt.Printf("[binpack] original metas count: %d\n", len(metas))
-
 	return buckets
 }
 
@@ -233,9 +211,6 @@ func write(input string, prefix string, buckets []FileBucket) {
 		}
 	}
 
-	// DEBUG: Print mapping info
-	fmt.Printf("[write] total lines in lineToBucket: %d\n", len(lineToBucket))
-
 	channels := make([]chan RecordData, len(buckets))
 	done := make(chan struct{}, len(buckets))
 
@@ -279,15 +254,11 @@ func write(input string, prefix string, buckets []FileBucket) {
 	}
 
 	lineNum := 0
-	totalLinesRead := 0
-	skippedLines := 0
-
 	for {
 		record, err := r.Read()
 		if err != nil {
 			break
 		}
-		totalLinesRead++
 
 		if lineNum == 0 {
 			for _, w := range writers {
@@ -300,7 +271,6 @@ func write(input string, prefix string, buckets []FileBucket) {
 		bucketIndex, ok := lineToBucket[lineNum]
 		if !ok {
 			fmt.Printf("Warning: line %d not found in any bucket, skipping...\n", lineNum)
-			skippedLines++
 			lineNum++
 			continue
 		}
@@ -318,8 +288,8 @@ func write(input string, prefix string, buckets []FileBucket) {
 		lineNum++
 	}
 
-	fmt.Printf("[write] total lines read from file: %d\n", totalLinesRead)
-	fmt.Printf("[write] total data lines processed: %d\n", lineNum-1)
-	fmt.Printf("[write] skipped lines: %d\n", skippedLines)
+
+
 	fmt.Println("[write] all files written successfully\n")
+
 }
