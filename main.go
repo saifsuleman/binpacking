@@ -265,6 +265,7 @@ func write(input string, prefix string, buckets []FileBucket) {
 				w.Write(record)
 			}
 			lineNum++
+			continue
 		}
 
 		bucketIndex, ok := lineToBucket[lineNum]
